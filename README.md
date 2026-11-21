@@ -142,7 +142,49 @@ All dashboard numbers are computed live with SQL aggregates (`COUNT`, `SUM`) —
   → My Events shows status → once approved & completed, My Hours shows logged hours.
 - **Donor**: register or log in → record a donation → My Donations → open a receipt → print/save as PDF.
 
-## 11. Notes for viva/demo
+## 11. Render and Vercel deployment
+
+Configure these Render environment variables:
+
+| Variable | Purpose |
+|---|---|
+| `DB_DATABASE_URL` | Recommended MySQL URL, for example `mysql://user:password@host:3306/volunteer_donor_management` |
+| `DB_HOST` | Cloud MySQL host (alternative to `DB_DATABASE_URL`) |
+| `DB_PORT` | Cloud MySQL port, usually `3306` |
+| `DB_USER` | Cloud database user |
+| `DB_PASSWORD` | Cloud database password |
+| `DB_NAME` | Existing database name, normally `volunteer_donor_management` |
+| `DB_SSL` | Set `true` when the cloud provider requires TLS |
+| `DB_SSL_REJECT_UNAUTHORIZED` | Set `true` by default; set `false` only if the provider documentation requires it |
+| `DB_SSL_CA` | Optional PEM certificate contents |
+| `DB_SSL_CA_PATH` | Optional path to a PEM certificate file |
+| `JWT_SECRET` | Long random secret shared by all backend instances |
+| `JWT_EXPIRES_IN` | Optional token lifetime, default `7d` |
+| `CLIENT_URL` | Exact Vercel frontend origin, such as `https://your-app.vercel.app` |
+
+Do not use `localhost` for a Render database host. Do not commit passwords or `.env` files.
+
+To migrate local data to a cloud MySQL provider, export and import the schema and data:
+
+```bash
+mysqldump -h localhost -u root -p --routines --triggers volunteer_donor_management > volunteer_donor_management.sql
+mysql -h CLOUD_HOST -P CLOUD_PORT -u CLOUD_USER -p CLOUD_DATABASE < volunteer_donor_management.sql
+```
+
+Create the database on the provider first if it is not created automatically, then verify that all tables and foreign keys were imported before changing Render credentials.
+
+Test the deployment:
+
+```bash
+curl https://YOUR-BACKEND.onrender.com/api/health
+curl -H 'Content-Type: application/json' \
+  -d '{"role":"admin","email":"admin@ngo.org","password":"password123"}' \
+  https://YOUR-BACKEND.onrender.com/api/auth/login
+```
+
+Set the Vercel variable `VITE_API_URL=https://YOUR-BACKEND.onrender.com/api`, redeploy the frontend, and confirm login for each demo role: Admin, Volunteer, and Donor.
+
+## 12. Notes for viva/demo
 
 - Passwords are hashed with bcrypt; JWTs are signed server-side and verified on every protected route.
 - Role-based authorization is enforced in Express middleware (`requireRole`), not just hidden in the UI.

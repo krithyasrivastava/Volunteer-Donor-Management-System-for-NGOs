@@ -10,6 +10,11 @@ const TABLE_BY_ROLE = {
 };
 
 function signToken(user, role, idCol) {
+  if (!process.env.JWT_SECRET) {
+    const err = new Error('Authentication service is not configured.');
+    err.status = 503;
+    throw err;
+  }
   return jwt.sign(
     { id: user[idCol], role, email: user.email, name: user.name },
     process.env.JWT_SECRET,
@@ -53,6 +58,9 @@ const register = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
   const { role, email, password } = req.body;
 
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required.' });
+  }
   if (!TABLE_BY_ROLE[role]) {
     return res.status(400).json({ message: 'Invalid role specified.' });
   }

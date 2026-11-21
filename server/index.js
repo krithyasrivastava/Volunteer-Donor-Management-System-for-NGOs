@@ -15,10 +15,36 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_URL || '*' }));
+const pool = require('./config/db');
+
+const allowedOrigins = (process.env.CLIENT_URL || process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://localhost:5173');
+}
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Origin is not allowed by CORS policy.'));
+  }
+}));
 app.use(express.json());
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'volunteer-donor-management-api' }));
+let databaseReady = false;
+
+app.get('/api/health', (req, res) => {
+  res.status(databaseReady ? 200 : 503).json({
+    status: databaseReady ? 'ok' : 'degraded',
+    service: 'volunteer-donor-management-api',
+    database: databaseReady ? 'connected' : 'unavailable'
+  });
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/volunteers', volunteerRoutes);
@@ -33,4 +59,23 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`API server running on http://localhost:${PORT}`));
+async function start() {
+  try {
+    await pool.testDatabaseConnection();
+    databaseReady = true;
+    console.log('[database]', pool.getDatabaseDiagnostics());
+  } catch (err) {
+    databaseReady = false;
+    console.error('[database-startup-error]', {
+      code: err.code,
+      message: err.message,
+      config: pool.getDatabaseDiagnostics()
+    });
+  }
+
+  app.listen(PORT, () => {
+    console.log(`API server listening on port ${PORT}`);
+  });
+}
+
+start();
