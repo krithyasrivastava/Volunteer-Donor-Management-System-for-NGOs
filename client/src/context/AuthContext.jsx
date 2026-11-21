@@ -21,6 +21,8 @@ export function AuthProvider({ children }) {
     } catch {
       localStorage.removeItem('gh_token');
       localStorage.removeItem('gh_role');
+      setUser(null);
+      setRole(null);
     } finally {
       setLoading(false);
     }
