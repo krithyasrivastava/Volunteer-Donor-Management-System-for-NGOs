@@ -79,6 +79,14 @@ npm run dev
 The app runs at `http://localhost:5173` and talks to the API at `http://localhost:5000/api`
 (override with a `VITE_API_URL` env var if needed).
 
+For the deployed Render backend, set `VITE_API_URL` to:
+
+```text
+https://volunteer-donor-management-system-for.onrender.com/api
+```
+
+The client includes this URL as the production fallback and in `client/.env.production`.
+
 ## 7. Test login credentials
 
 All seeded accounts use the password: **`password123`**
